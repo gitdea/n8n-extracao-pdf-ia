@@ -1,0 +1,617 @@
+{
+  "name": "Extrair Dados de PDF via Chat",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "allowFileUploads": true,
+          "allowedFilesMimeTypes": "application/pdf",
+          "responseMode": "lastNode"
+        }
+      },
+      "id": "4918f82b-5eac-4e67-bd23-1885e719f6d0",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        112
+      ],
+      "webhookId": "e8976992-bf99-4b39-a741-daaad0b8f51c"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "tem-binario",
+              "leftValue": "={{ Object.keys($binary).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7ebcf1a7-a306-4a17-828d-9312f85ced79",
+      "name": "Tem Anexo PDF?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "={{ Object.keys($binary)[0] }}",
+        "options": {}
+      },
+      "id": "d95e44d7-01d1-425a-9f6c-350d08ad861c",
+      "name": "Extrair Texto do PDF",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        112
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "tem-texto",
+              "leftValue": "={{ ($json.text || \"\").trim().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a0421d59-be01-44b1-a7a2-493d2c888efe",
+      "name": "Tem Texto?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        112,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Extraia do texto abaixo os dados de TODAS as pessoas/credores mencionados e retorne um JSON com o campo \"pessoas\", que é uma lista de objetos com os campos nome, cpf, endereco e telefone — um objeto por pessoa encontrada.\n\nTexto extraído do PDF:\n{{ $json.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Você é um assistente especializado em extrair dados pessoais de documentos. Extraia TODOS os registros de pessoas/credores presentes no texto, sem omitir nenhum. Retorne sempre o JSON estruturado solicitado, com a lista \"pessoas\" contendo um objeto por pessoa. Se algum campo de uma pessoa não estiver presente no texto, retorne-o como string vazia."
+        }
+      },
+      "id": "2eb8eb9a-e549-499b-b2ac-4c8c47efd95b",
+      "name": "AI Agent Extrator",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        448,
+        112
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b",
+        "options": {}
+      },
+      "id": "eb6dc4ad-d53f-463a-8207-5e2452a63d0c",
+      "name": "Groq Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        464,
+        336
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "BRkaTckgf9Lb3rhu",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\"pessoas\":[{\"nome\":\"Maria da Silva\",\"cpf\":\"123.456.789-00\",\"endereco\":\"Rua das Flores, 123 - São Paulo/SP\",\"telefone\":\"(11) 98765-4321\"}]}"
+      },
+      "id": "205fb38a-fa25-4e95-b3bf-1d0447a656d9",
+      "name": "Parser JSON",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        592,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = $('AI Agent Extrator').item.json.output || {};\nconst pessoas = out.pessoas || [];\nreturn pessoas.map(p => ({ json: {\n  nome: p.nome || '',\n  cpf: p.cpf || '',\n  endereco: p.endereco || '',\n  telefone: p.telefone || ''\n} }));"
+      },
+      "id": "c2882873-c6aa-419a-a7eb-e701da1f3448",
+      "name": "Separar Pessoas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "02IScQPl3PbAtG5Z"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "nome": "={{ $json.nome }}",
+            "cpf": "={{ $json.cpf }}",
+            "endereco": "={{ $json.endereco }}",
+            "telefone": "={{ $json.telefone }}",
+            "arquivo_origem": "chat-pdf",
+            "processado_em": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "nome",
+              "displayName": "nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cpf",
+              "displayName": "cpf",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "endereco",
+              "displayName": "endereco",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "arquivo_origem",
+              "displayName": "arquivo_origem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "processado_em",
+              "displayName": "processado_em",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "date",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d50af2e3-6079-4583-b1bb-bccf90f4f4a5",
+      "name": "Salvar na Base",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1424,
+        112
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "msg-resumo",
+              "name": "output",
+              "value": "={{ \"Extração concluída: \" + $input.all().length + \" pessoa(s) salva(s) na base de dados.\" }}",
+              "type": "string"
+            }
+          ],
+          "options": {}
+        },
+        "options": {}
+      },
+      "id": "35ad9a45-c23c-4300-aedb-2d49af21d778",
+      "name": "Resumo da Extração",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1648,
+        112
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "msg-erro",
+              "name": "output",
+              "value": "={{ \"Não consegui processar este arquivo: \" + ($json.error && $json.error.message ? $json.error.message : \"erro desconhecido\") }}",
+              "type": "string"
+            }
+          ],
+          "options": {}
+        },
+        "options": {}
+      },
+      "id": "2f07b800-1737-4e98-b6b9-1d484e2c448e",
+      "name": "Erro no Processamento",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1712,
+        368
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "binaryProperty": "={{ Object.keys($binary)[0] }}",
+        "options": {}
+      },
+      "id": "7defbc7f-09e5-4fef-a304-4c842dfff916",
+      "name": "OCR (PDF Digitalizado)",
+      "type": "n8n-nodes-base.mistralAi",
+      "typeVersion": 1,
+      "position": [
+        400,
+        528
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "texto-ocr",
+              "name": "text",
+              "value": "={{ $json.extractedText }}",
+              "type": "string"
+            }
+          ],
+          "options": {}
+        },
+        "options": {}
+      },
+      "id": "24d33097-89bd-4beb-bb96-8bfd9d54ae9a",
+      "name": "Normalizar Texto OCR",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        624,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "02IScQPl3PbAtG5Z"
+        },
+        "matchType": "allConditions",
+        "returnAll": true
+      },
+      "id": "2c195bf3-9e48-4bcc-a10b-7c59260abae3",
+      "name": "Buscar na Base",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -176,
+        400
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Pergunta do usuário:\n{{ $('Chat Trigger').item.json.chatInput }}\n\nRegistros atualmente na base de dados de precatórios (JSON por linha):\n{{ $input.all().filter(i => Object.keys(i.json).length > 0).map(i => JSON.stringify(i.json)).join('\\n') || 'Nenhum registro cadastrado ainda.' }}\n\nResponda à pergunta usando APENAS os registros acima.",
+        "options": {
+          "systemMessage": "Você é um assistente que responde perguntas sobre dados de precatórios extraídos de PDFs. Use APENAS os registros fornecidos na base de dados. Se a informação não estiver nos registros, diga claramente que não encontrou na base. Responda em português, de forma objetiva."
+        }
+      },
+      "id": "77c2e439-afe1-4034-a92e-d0047eb33da2",
+      "name": "AI Agent Consultor",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        48,
+        496
+      ],
+      "executeOnce": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b",
+        "options": {}
+      },
+      "id": "7aba9e57-cb52-43af-af94-9d85f3115867",
+      "name": "Groq Chat Model Consultor",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        128,
+        624
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "BRkaTckgf9Lb3rhu",
+          "name": "Groq account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "Tem Anexo PDF?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Anexo PDF?": {
+      "main": [
+        [
+          {
+            "node": "Extrair Texto do PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar na Base",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair Texto do PDF": {
+      "main": [
+        [
+          {
+            "node": "Tem Texto?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Erro no Processamento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Texto?": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Extrator",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "OCR (PDF Digitalizado)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Extrator": {
+      "main": [
+        [
+          {
+            "node": "Separar Pessoas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Erro no Processamento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent Extrator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser JSON": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent Extrator",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar Pessoas": {
+      "main": [
+        [
+          {
+            "node": "Salvar na Base",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar na Base": {
+      "main": [
+        [
+          {
+            "node": "Resumo da Extração",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Erro no Processamento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OCR (PDF Digitalizado)": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Texto OCR",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Erro no Processamento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Texto OCR": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Extrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar na Base": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Consultor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Consultor": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Erro no Processamento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model Consultor": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent Consultor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "16621d66-2f0e-4255-afd6-a52622997f3d",
+  "meta": {
+    "instanceId": "3eedadf3b149956a41c3dd2b79eed078978235be5743122dc3426cc2dd524cfa"
+  },
+  "nodeGroups": [],
+  "id": "Uifdk7dw7zc53QkN",
+  "tags": []
+}
