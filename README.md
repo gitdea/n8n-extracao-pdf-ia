@@ -1,6 +1,6 @@
-# 🤖 Automação com IA: Extração de Dados de PDFs (n8n)
+# Automação com IA: Extração de Dados de PDF (n8n)
 
-Fluxo em **n8n** que automatiza a extração de dados pessoais de documentos PDF — incluindo **digitalizados/escaneados** — usando **OCR + LLM**, com interface conversacional via chat.
+Fluxo em **n8n** que automatiza a extração de dados pessoais de documentos PDF,incluindo **digitalizados/escaneados**,usando **OCR + LLM**, com interface conversacional via chat.
 
 ## Como funciona
 
@@ -25,13 +25,13 @@ Fluxo em **n8n** que automatiza a extração de dados pessoais de documentos PDF
 3. Configure suas credenciais (Groq API e Mistral API)
 4. Ative o workflow e use o chat para enviar PDFs
 
-## 📌 Observações
+## Observações
 
-- Este é um **ambiente de demonstração** — os dados nos exemplos (CPFs, nomes etc.) são **todos fictícios**.
+- Este é um **ambiente de demonstração** — os dados nos exemplos (CPF, nomes etc.) são **todos fictícios**.
 - O fluxo está **pronto para produção**: basta conectar credenciais corporativas e um banco de dados real (PostgreSQL, MySQL etc.).
 
 ## Autora
 
 **Andrea Cruz Leonardo** — Desenvolvedora Back-End | Automação com n8n e IA
 
-Em busca de oportunidades 🚀
+
